@@ -63,32 +63,31 @@ class xOr_decoder_thread extends Thread{
         this.THREADS = THREADS;
     }
     
+    public void printPassage(){
+        int counter = 0;                                                        //hold position in key, wraps back to 0 once == keylength
+        Scanner sc = new Scanner(code);                                           //new scanner on ciphercode
+        while(sc.hasNext()){            
+            int xOr = Integer.parseInt("" + sc.next());                         
+            int key = keyArray.get(counter);
+            System.out.print((char)(xOr^key));                                  //prints char by char
+            counter++;
+            if(counter>=keyArray.size())
+                counter = 0;
+        }
+
+        System.out.println("\n");
+        for(int i=0; i<keyArray.size(); i++){                                 //print key char by char
+            int x = keyArray.get(i);
+            System.out.print((char)(x));                                        
+        }
+        System.out.println();
+    }
     
     public void run(){
         while(!keyFound)
             findKey();
         if(keyFinder){
-//////////Comment out between lines if printing passage is unneccesary
-/*
-            int counter = 0;                                                        //hold position in key, wraps back to 0 once == keylength
-            Scanner sc = new Scanner(code);                                           //new scanner on ciphercode
-            while(sc.hasNext()){            
-                int xOr = Integer.parseInt("" + sc.next());                         
-                int key = keyArray.get(counter);
-                System.out.print((char)(xOr^key));                                  //prints char by char
-                counter++;
-                if(counter>=keyArray.size())
-                    counter = 0;
-            }
-    
-            System.out.println("\n");
-            for(int i=0; i<keyArray.size(); i++){                                 //print key char by char
-                int x = keyArray.get(i);
-                System.out.print((char)(x));                                        
-            }
-            System.out.println();
-*/
-///////////////////////////////
+//            printPassage();//Comment out if printing passage is unneccesary
             long end = System.currentTimeMillis();
             printTime(end-start);             
             System.exit(0);
@@ -131,16 +130,8 @@ class xOr_decoder_thread extends Thread{
             token += c;
             if(c==' '){
                 token = token.substring(0,token.length()-1);
-                if(punctTest(token)==false){
-//                    System.out.println(" but it didn't pass Punctuation test: >>>" + token + "<<<");
-                    return false;
-                }
-                if(qTest(token)==false){
-//                    System.out.println(" but it didn't pass Q test: >>>" + token + "<<<");
-                    return false;
-                }
-                if(noTripleLetter(token)==false){
-//                    System.out.println(" but it didn't pass Triple Letter test: >>>" + token + "<<<");
+                if(tests(token)){
+//                    System.out.println(token + " FAILED");
                     return false;
                 }
                 token = "";
@@ -150,51 +141,49 @@ class xOr_decoder_thread extends Thread{
                 counter = 0;
         }
         if(token!=""){
-            if(punctTest(token)==false){
-//                System.out.println(" but it didn't pass Punctuation test: >>>" + token + "<<<");
+            if(tests(token)){
+//                System.out.println(token + " FAILED");
                 return false;
             }
-            if(qTest(token)==false){
-//                System.out.println(" but it didn't pass Q test: >>>" + token + "<<<");
-                return false;
-            }
-            if(noTripleLetter(token)==false){
-//                System.out.println(" but it didn't pass Triple Letter test: >>>" + token + "<<<");
-                return false;
-            }            token = "";
+            token = "";
         }
         System.out.println(" and it PASSED all tests");
         return true;
+    }
+    
+    private static boolean tests(String token){
+        if(punctTest(token) || qTest(token) || noTripleLetter(token))
+            return true;
+        return false;
     }
     
     private static boolean qTest(String token){
         for(int i=0; i<token.length(); i++){
             if(token.charAt(i)=='q' || token.charAt(i)=='Q')
                 if(token.charAt(i+1)!='u' && token.charAt(i+1)!='U' )
-                    return false;
+                    return true;
         }
-        return true;
+        return false;
     }
     
     private static boolean punctTest(String token){
         for(int i=0; i<token.length(); i++){
             char c = token.charAt(i);
-            if(c=='(' && i!=0) return false; 
-            if(c==')') if(i!=token.length()-1 && i!=token.length()-2) return false;
-            if(c=='"' && i!=0 && i!=token.length()-1 && i!=token.length()-2) return false;
-            if(c=='&' && token.length()!=1) return false;
+            if((c=='.' || c=='!' || c=='?') && i!=token.length()-1 && i!=token.length()-2) return true;
+            if(c=='"' && i!=0 && i!=token.length()-1 && i!=token.length()-2) return true;
+            if(c=='&' && token.length()!=1) return true;
         }
-        return true;
+        return false;
     }
     
     private static boolean noTripleLetter(String token){
         for(int i=0; i<token.length(); i++){
             try{
                 if(token.charAt(i) == token.charAt(i+1) && token.charAt(i+1) == token.charAt(i+2))
-                    return false; 
+                    return true;
             }catch(Exception e){}
         }        
-        return true;
+        return false;
     }
     
     
@@ -213,21 +202,21 @@ class xOr_decoder_thread extends Thread{
         int larger = 0;                                                         //Largest number of letters found
         int key = 0;                                                            //key that found those letters
         for(int i : keyChars){                                                  //chars (a->z)&(A->Z)&(" ") in ascii
-            Scanner cs = new Scanner(code);                                     //scan the text
+            Scanner sc = new Scanner(code);                                     //scan the text
             for(int j=0; j<keyIndex; j++)                                       //provides offset to start if character isn't first in key
-                cs.next();                                                      // "ditto"
+                sc.next();                                                      // "ditto"
             int counter = 0;                                                    //number of times letter was found with current possible key
             LetterValueGen valGen = new LetterValueGen();
-            while(cs.hasNext()){                                                //while items still in line
-                int xOr = Integer.parseInt(""+cs.next());                       //xOr value 
+            while(sc.hasNext()){                                                //while items still in line
+                int xOr = Integer.parseInt(""+sc.next());                       //xOr value 
                 int y = (xOr^i);      
                 int charPoints = valGen.getVal((char)y);                        //xOr value XOR with key
                 if(charPoints<0)
                     return -1;
                 counter += charPoints;                                           //increment counter
-                for(int j=1; j<keyLen; j++){                                    //depending on keyLen, skips appropriate amount of chars to wrap key
+                for(int j=1; j<keyLen; j++){                                 //depending on keyLen, skips appropriate amount of chars to wrap key
                     try{
-                        cs.next();
+                        sc.next();
                     }catch(Exception e){}
                 }
             }
