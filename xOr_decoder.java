@@ -6,41 +6,45 @@ public class xOr_decoder{
 
     private static int THREADS;
     
+    
+    //Param: args - args[0] is number of threads to break task into
     public static void main(String[] args) throws FileNotFoundException {
         long start = System.currentTimeMillis();
+        //if no args or args[0] isnt int use just one thread
         try{
             THREADS = Integer.parseInt(args[0]);
         }catch(Exception e){
             THREADS = 1;
         }
         Scanner sc = new Scanner(new File("cipher.txt"));
-        String cipherCode = sc.nextLine().replace(',',' ');
+        String cipherCode = sc.nextLine().replace(',',' ');//used for projectEuler problem 59
         
-        ArrayList<Integer> keyChars = makeKeyChars();
+        //Characters used in guessing keys
+        ArrayList<Integer> possibleKeyChars = getKeyChars();
         
-        for(int i=1; i<=THREADS; i++){
-            xOr_decoder_thread t = new xOr_decoder_thread(i, cipherCode, start, keyChars, THREADS);
+        for(int numThreads=1; numThreads<=THREADS; numThreads++){
+            xOr_decoder_thread t = new xOr_decoder_thread(numThreads, cipherCode, start, possibleKeyChars, THREADS);
             t.start();
         }
     }
     
-    private static ArrayList<Integer> makeKeyChars(){
-        ArrayList<Integer> keyChars = new ArrayList<Integer> ();
-        keyChars.add(32);
+    private static ArrayList<Integer> getKeyChars(){
+        ArrayList<Integer> possibleKeyChars = new ArrayList<Integer> ();
+        possibleKeyChars.add(32);
         for(int i=97; i<=122; i++)
-            keyChars.add(i);
+            possibleKeyChars.add(i);
         for(int i=65; i<=90; i++)
-            keyChars.add(i);
+            possibleKeyChars.add(i);
         for(int i=48; i<=57; i++)
-            keyChars.add(i);
-        return keyChars;
+            possibleKeyChars.add(i);
+        return possibleKeyChars;
     }
 }
 
 
 class xOr_decoder_thread extends Thread{
     
-    private static ArrayList<Integer> keyChars;
+    private static ArrayList<Integer> possibleKeyChars;
     private static boolean keyFound;
     private static int THREADS;
     private static long start;
@@ -52,12 +56,12 @@ class xOr_decoder_thread extends Thread{
     private int currentScore;
     private ArrayList<Integer> keyArray = new ArrayList<Integer>();
         
-    public xOr_decoder_thread(int keyLength, String code, long start, ArrayList<Integer> keyChars, int THREADS){
+    public xOr_decoder_thread(int keyLength, String code, long start, ArrayList<Integer> possibleKeyChars, int THREADS){
         this.keyLength = keyLength;
         this.PID = keyLength;
         this.code = code;
         this.start = start;
-        this.keyChars = keyChars;
+        this.possibleKeyChars = possibleKeyChars;
         this.keyFound = false;
         this.keyFinder = false;
         this.THREADS = THREADS;
@@ -97,7 +101,7 @@ class xOr_decoder_thread extends Thread{
     private void findKey(){
         ArrayList<Integer> list = new ArrayList<Integer>();
         for(int j=0; j<keyLength; j++){
-            int listKey = getKey(j, keyLength);
+            int listKey = getKeyChar(j, keyLength);
             if (listKey!=-1)
                 list.add(listKey);
         }
@@ -130,7 +134,7 @@ class xOr_decoder_thread extends Thread{
             token += c;
             if(c==' '){
                 token = token.substring(0,token.length()-1);
-                if(tests(token)){
+                if(grammarTests(token)){
 //                    System.out.println(token + " FAILED");
                     return false;
                 }
@@ -141,7 +145,7 @@ class xOr_decoder_thread extends Thread{
                 counter = 0;
         }
         if(token!=""){
-            if(tests(token)){
+            if(grammarTests(token)){
 //                System.out.println(token + " FAILED");
                 return false;
             }
@@ -151,35 +155,35 @@ class xOr_decoder_thread extends Thread{
         return true;
     }
     
-    private static boolean tests(String token){
+    private static boolean grammarTests(String token){
         if(punctTest(token) || qTest(token) || noTripleLetter(token))
             return true;
         return false;
     }
     
     private static boolean qTest(String token){
-        for(int i=0; i<token.length(); i++){
-            if(token.charAt(i)=='q' || token.charAt(i)=='Q')
-                if(token.charAt(i+1)!='u' && token.charAt(i+1)!='U' )
+        for(int index=0; index<token.length(); index++){
+            if(token.charAt(index)=='q' || token.charAt(index)=='Q')
+                if(token.charAt(index+1)!='u' && token.charAt(index+1)!='U' )
                     return true;
         }
         return false;
     }
     
     private static boolean punctTest(String token){
-        for(int i=0; i<token.length(); i++){
-            char c = token.charAt(i);
-            if((c=='.' || c=='!' || c=='?') && i!=token.length()-1 && i!=token.length()-2) return true;
-            if(c=='"' && i!=0 && i!=token.length()-1 && i!=token.length()-2) return true;
+        for(int index=0; index<token.length(); index++){
+            char c = token.charAt(index);
+            if((c=='.' || c=='!' || c=='?') && index!=token.length()-1 && index!=token.length()-2) return true;
+            if(c=='"' && index!=0 && index!=token.length()-1 && index!=token.length()-2) return true;
             if(c=='&' && token.length()!=1) return true;
         }
         return false;
     }
     
     private static boolean noTripleLetter(String token){
-        for(int i=0; i<token.length(); i++){
+        for(int index=0; index<token.length(); index++){
             try{
-                if(token.charAt(i) == token.charAt(i+1) && token.charAt(i+1) == token.charAt(i+2))
+                if(token.charAt(index) == token.charAt(index+1) && token.charAt(index+1) == token.charAt(index+2))
                     return true;
             }catch(Exception e){}
         }        
@@ -196,37 +200,37 @@ class xOr_decoder_thread extends Thread{
      
     //Parameters: keyIndex - the offset to start the xOr wrapping with
     //Returns: key - char that generated the most common letters in english
-    private int getKey(int keyIndex, int keyLen){
+    private int getKeyChar(int keyIndex, int keyLen){
         if(keyIndex==0)
             currentScore = 0;
-        int larger = 0;                                                         //Largest number of letters found
-        int key = 0;                                                            //key that found those letters
-        for(int i : keyChars){                                                  //chars (a->z)&(A->Z)&(" ") in ascii
+        int largerScore = 0;                                                         //Largest number of letters found
+        int keyChar = 0;                                                            //key that found those letters
+        for(int x : possibleKeyChars){                                                  //chars (a->z)&(A->Z)&(" ") in ascii
             Scanner sc = new Scanner(code);                                     //scan the text
             for(int j=0; j<keyIndex; j++)                                       //provides offset to start if character isn't first in key
                 sc.next();                                                      // "ditto"
-            int counter = 0;                                                    //number of times letter was found with current possible key
+            int keyCharScore = 0;                                                    //number of times letter was found with current possible key
             LetterValueGen valGen = new LetterValueGen();
             while(sc.hasNext()){                                                //while items still in line
                 int xOr = Integer.parseInt(""+sc.next());                       //xOr value 
-                int y = (xOr^i);      
+                int y = (xOr^x);      
                 int charPoints = valGen.getVal((char)y);                        //xOr value XOR with key
                 if(charPoints<0)
                     return -1;
-                counter += charPoints;                                           //increment counter
+                keyCharScore += charPoints;                                           //increment keyCharScore
                 for(int j=1; j<keyLen; j++){                                 //depending on keyLen, skips appropriate amount of chars to wrap key
                     try{
                         sc.next();
                     }catch(Exception e){}
                 }
             }
-            if(larger<=counter){                                                //saves key with best results
-                larger = counter;
-                key = i;
+            if(largerScore<=keyCharScore){                                                //saves key with best results
+                largerScore = keyCharScore;
+                keyChar = x;
             }
         }
-        currentScore += larger;
-        return key;
+        currentScore += largerScore;
+        return keyChar;
     }
     
     public static void printTime(long ms){
