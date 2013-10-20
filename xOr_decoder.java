@@ -1,60 +1,200 @@
 import java.util.*;
 import java.io.*;
 import java.math.*;
+
 public class xOr_decoder{
 
-    private static String cipherCode;
-    private static Map<Integer, ArrayList<Integer>> keys = new TreeMap<Integer, ArrayList<Integer>>();
-    private static int currentScore;
-    private static ArrayList<Integer> keyChars;
+    private static int THREADS;
     
     public static void main(String[] args) throws FileNotFoundException {
-
         long start = System.currentTimeMillis();
-        makeKeyChars();
-
+        try{
+            THREADS = Integer.parseInt(args[0]);
+        }catch(Exception e){
+            THREADS = 1;
+        }
         Scanner sc = new Scanner(new File("cipher.txt"));
-        cipherCode = sc.nextLine().replace(',',' ');                            //removes any commas from string (for euler file)
-        buildMap(Integer.parseInt(args[0]));                                    //(1 - args[0]) of possible key lengths
-        int keyScore = 0;                                                       //best score for each key length
-        for(int x : keys.keySet())                                              //find the key with highest score
-            if(x>keyScore)
-                keyScore = x;
-        ArrayList<Integer> targetList = keys.get(keyScore);                     //use best key
-        int counter = 0;                                                        //hold position in key, wraps back to 0 once == keylength
-        sc = new Scanner(cipherCode);                                           //new scanner on ciphercode
-        while(sc.hasNext()){            
-            int xOr = Integer.parseInt("" + sc.next());                         
-            int key = targetList.get(counter);
-            System.out.print((char)(xOr^key));                                  //prints char by char
-            counter++;
-            if(counter>=targetList.size())
-                counter = 0;
+        String cipherCode = sc.nextLine().replace(',',' ');
+        
+        ArrayList<Integer> keyChars = makeKeyChars();
+        
+        for(int i=1; i<=THREADS; i++){
+            xOr_decoder_thread t = new xOr_decoder_thread(i, cipherCode, start, keyChars, THREADS);
+            t.start();
         }
-
-        System.out.println("\n");
-        for(int i=0; i<targetList.size(); i++){                                 //print key char by char
-            int x = targetList.get(i);
-            System.out.print((char)(x));                                        
-        }
-        System.out.println();
-
-        long end = System.currentTimeMillis();
-        System.out.println();
-        printTime(end-start); 
     }
     
-    private static void buildMap(int maxKeyLen){
-        for(int i=maxKeyLen; i>0; i--){
-            ArrayList<Integer> list = new ArrayList<Integer>();
-            for(int j=0; j<i; j++){
-                int listKey = getKey(j,i);
-                if (listKey!=-1)
-                    list.add(listKey);
+    private static ArrayList<Integer> makeKeyChars(){
+        ArrayList<Integer> keyChars = new ArrayList<Integer> ();
+        keyChars.add(32);
+        for(int i=97; i<=122; i++)
+            keyChars.add(i);
+        for(int i=65; i<=90; i++)
+            keyChars.add(i);
+        for(int i=48; i<=57; i++)
+            keyChars.add(i);
+        return keyChars;
+    }
+}
+
+
+class xOr_decoder_thread extends Thread{
+    
+    private static ArrayList<Integer> keyChars;
+    private static boolean keyFound;
+    private static int THREADS;
+    private static long start;
+    
+    private String code;
+    private int PID;
+    private int keyLength;
+    private boolean keyFinder;
+    private int currentScore;
+    private ArrayList<Integer> keyArray = new ArrayList<Integer>();
+        
+    public xOr_decoder_thread(int keyLength, String code, long start, ArrayList<Integer> keyChars, int THREADS){
+        this.keyLength = keyLength;
+        this.PID = keyLength;
+        this.code = code;
+        this.start = start;
+        this.keyChars = keyChars;
+        this.keyFound = false;
+        this.keyFinder = false;
+        this.THREADS = THREADS;
+    }
+    
+    
+    public void run(){
+        while(!keyFound)
+            findKey();
+        if(keyFinder){
+//////////Comment out between lines if printing passage is unneccesary
+/*
+            int counter = 0;                                                        //hold position in key, wraps back to 0 once == keylength
+            Scanner sc = new Scanner(code);                                           //new scanner on ciphercode
+            while(sc.hasNext()){            
+                int xOr = Integer.parseInt("" + sc.next());                         
+                int key = keyArray.get(counter);
+                System.out.print((char)(xOr^key));                                  //prints char by char
+                counter++;
+                if(counter>=keyArray.size())
+                    counter = 0;
             }
-            keys.put(currentScore, list);
-            System.out.println();                 //for seperating key index results bewteen rounds  //FIXME
+    
+            System.out.println("\n");
+            for(int i=0; i<keyArray.size(); i++){                                 //print key char by char
+                int x = keyArray.get(i);
+                System.out.print((char)(x));                                        
+            }
+            System.out.println();
+*/
+///////////////////////////////
+            long end = System.currentTimeMillis();
+            printTime(end-start);             
+            System.exit(0);
         }
+    }
+    
+    private void findKey(){
+        ArrayList<Integer> list = new ArrayList<Integer>();
+        for(int j=0; j<keyLength; j++){
+            int listKey = getKey(j, keyLength);
+            if (listKey!=-1)
+                list.add(listKey);
+        }
+        for(int i =0; i<list.size(); i++){
+            int x = list.get(i);
+        }
+        if(engTest(list)){
+            keyFinder = true; 
+            keyFound = true;
+            keyArray = list;
+        }else{
+            keyLength += THREADS;
+        }
+        System.out.println();
+    }
+
+    private boolean engTest(ArrayList<Integer> keyList){
+        Scanner sc = new Scanner(code);
+        String key = "";
+        for(int i=0; i<keyList.size(); i++)
+            key+=((char)(int)(keyList.get(i)));
+        System.out.print("Process " + PID + ": Best of length " + key.length() + " is \"" + key + "\"");
+
+        String token = "";
+        int counter = 0;
+        while(sc.hasNext()){
+            int xOr = Integer.parseInt("" + sc.next());
+            int keyIndex = keyList.get(counter);
+            char c = (char)(xOr^keyIndex);
+            token += c;
+            if(c==' '){
+                token = token.substring(0,token.length()-1);
+                if(punctTest(token)==false){
+//                    System.out.println(" but it didn't pass Punctuation test: >>>" + token + "<<<");
+                    return false;
+                }
+                if(qTest(token)==false){
+//                    System.out.println(" but it didn't pass Q test: >>>" + token + "<<<");
+                    return false;
+                }
+                if(noTripleLetter(token)==false){
+//                    System.out.println(" but it didn't pass Triple Letter test: >>>" + token + "<<<");
+                    return false;
+                }
+                token = "";
+            }
+            counter++;
+            if(counter>=key.length())
+                counter = 0;
+        }
+        if(token!=""){
+            if(punctTest(token)==false){
+//                System.out.println(" but it didn't pass Punctuation test: >>>" + token + "<<<");
+                return false;
+            }
+            if(qTest(token)==false){
+//                System.out.println(" but it didn't pass Q test: >>>" + token + "<<<");
+                return false;
+            }
+            if(noTripleLetter(token)==false){
+//                System.out.println(" but it didn't pass Triple Letter test: >>>" + token + "<<<");
+                return false;
+            }            token = "";
+        }
+        System.out.println(" and it PASSED all tests");
+        return true;
+    }
+    
+    private static boolean qTest(String token){
+        for(int i=0; i<token.length(); i++){
+            if(token.charAt(i)=='q' || token.charAt(i)=='Q')
+                if(token.charAt(i+1)!='u' && token.charAt(i+1)!='U' )
+                    return false;
+        }
+        return true;
+    }
+    
+    private static boolean punctTest(String token){
+        for(int i=0; i<token.length(); i++){
+            char c = token.charAt(i);
+            if(c=='(' && i!=0) return false; 
+            if(c==')') if(i!=token.length()-1 && i!=token.length()-2) return false;
+            if(c=='"' && i!=0 && i!=token.length()-1 && i!=token.length()-2) return false;
+            if(c=='&' && token.length()!=1) return false;
+        }
+        return true;
+    }
+    
+    private static boolean noTripleLetter(String token){
+        for(int i=0; i<token.length(); i++){
+            try{
+                if(token.charAt(i) == token.charAt(i+1) && token.charAt(i+1) == token.charAt(i+2))
+                    return false; 
+            }catch(Exception e){}
+        }        
+        return true;
     }
     
     
@@ -67,13 +207,13 @@ public class xOr_decoder{
      
     //Parameters: keyIndex - the offset to start the xOr wrapping with
     //Returns: key - char that generated the most common letters in english
-    private static int getKey(int keyIndex, int keyLen){
+    private int getKey(int keyIndex, int keyLen){
         if(keyIndex==0)
             currentScore = 0;
         int larger = 0;                                                         //Largest number of letters found
         int key = 0;                                                            //key that found those letters
         for(int i : keyChars){                                                  //chars (a->z)&(A->Z)&(" ") in ascii
-            Scanner cs = new Scanner(cipherCode);                                     //scan the text
+            Scanner cs = new Scanner(code);                                     //scan the text
             for(int j=0; j<keyIndex; j++)                                       //provides offset to start if character isn't first in key
                 cs.next();                                                      // "ditto"
             int counter = 0;                                                    //number of times letter was found with current possible key
@@ -97,26 +237,9 @@ public class xOr_decoder{
             }
         }
         currentScore += larger;
-        ///*System.out.print("keyIndex: " + keyIndex + " = " + key + " = '" + ((char)key) + "' with a score of " + larger);       //prints key index, int value, char value //FIXME
-        if(keyIndex==keyLen-1){
-            System.out.print(keyLen + " Total: " + currentScore);
-            System.out.println();
-        }//*/
         return key;
     }
     
-    private static void makeKeyChars(){
-        keyChars = new ArrayList<Integer> ();
-        keyChars.add(32);
-        for(int i=97; i<=122; i++)
-            keyChars.add(i);
-        for(int i=65; i<=90; i++)
-            keyChars.add(i);
-        for(int i=48; i<=57; i++)
-            keyChars.add(i);
-        
-    }
-
     public static void printTime(long ms){
         long s=0, m=0, h=0;
         if(ms>1000){
