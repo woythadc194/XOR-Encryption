@@ -155,12 +155,23 @@ class xOr_decoder_thread extends Thread{
         return true;
     }
     
+    /*
+     *  Parameters: String token    - token made from bitwise XOR of code^key 
+     *  Returns:    Boolean true    - if any of the grammar tests return true
+     *                              - meaning that the tests failed
+     *              Boolean false   - if all tests returned false meaning passed
+     */    
     private static boolean grammarTests(String token){
         if(punctTest(token) || qTest(token) || noTripleLetter(token))
             return true;
         return false;
     }
     
+    /*
+     *  Parameters: String token    - token made from bitwise XOR of code^key 
+     *  Returns:    Boolean true    - if |q| is not followed by |u|
+     *              Boolean false   - if |q| is followed by |u|
+     */    
     private static boolean qTest(String token){
         for(int index=0; index<token.length(); index++){
             if(token.charAt(index)=='q' || token.charAt(index)=='Q')
@@ -170,6 +181,12 @@ class xOr_decoder_thread extends Thread{
         return false;
     }
     
+    
+    /*
+     *  Parameters: String token    - token made from bitwise XOR of code^key 
+     *  Returns:    Boolean true    - if (.!?"&) are out of place in a token
+     *              Boolean false   - if (.!?"&) are not out of place in a token
+     */
     private static boolean punctTest(String token){
         for(int index=0; index<token.length(); index++){
             char c = token.charAt(index);
@@ -180,12 +197,17 @@ class xOr_decoder_thread extends Thread{
         return false;
     }
     
+    /*
+     *  Parameters: String token    - token made from bitwise XOR of code^key 
+     *  Returns:    Boolean true    - Are 3 same char in a row in token
+     *              Boolean false   - Not 3 same char in a row in token
+     */
     private static boolean noTripleLetter(String token){
         for(int index=0; index<token.length(); index++){
             try{
                 if(token.charAt(index) == token.charAt(index+1) && token.charAt(index+1) == token.charAt(index+2))
                     return true;
-            }catch(Exception e){}
+            }catch(Exception e){} //catch for indexOutOfBounds for end of string testing
         }        
         return false;
     }
@@ -197,7 +219,6 @@ class xOr_decoder_thread extends Thread{
      *  amount or the characters 'e', 't', 'a', 'o', 'i', 'n' must be the 
      *  correct key letter
      */
-     
     //Parameters: keyIndex - the offset to start the xOr wrapping with
     //Returns: key - char that generated the most common letters in english
     private int getKeyChar(int keyIndex, int keyLen){
@@ -225,7 +246,7 @@ class xOr_decoder_thread extends Thread{
                 for(int j=1; j<keyLen; j++){                                 
                     try{
                         sc.next();
-                    }catch(Exception e){}
+                    }catch(Exception e){} //for end of input catching
                 }
             }
             //saves key with best results
@@ -238,6 +259,11 @@ class xOr_decoder_thread extends Thread{
         return keyChar;
     }
     
+    
+    /*
+     * Summary:     Prints time elapsed in a hh:mm:ss.xxx format
+     * Parameters:  long ms     - elapsed runtime in ms
+     */
     public static void printTime(long ms){
         long s=0, m=0, h=0;
         if(ms>1000){
