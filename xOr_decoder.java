@@ -203,12 +203,9 @@ class xOr_decoder_thread extends Thread{
      *              Boolean false   - Not 3 same char in a row in token
      */
     private static boolean noTripleLetter(String token){
-        for(int index=0; index<token.length(); index++){
-            try{
-                if(token.charAt(index) == token.charAt(index+1) && token.charAt(index+1) == token.charAt(index+2))
-                    return true;
-            }catch(Exception e){} //catch for indexOutOfBounds for end of string testing
-        }        
+        for(int index=0; index<token.length()-2; index++)
+            if(token.charAt(index) == token.charAt(index+1) && token.charAt(index+1) == token.charAt(index+2))
+                return true;
         return false;
     }
     
