@@ -203,28 +203,33 @@ class xOr_decoder_thread extends Thread{
     private int getKeyChar(int keyIndex, int keyLen){
         if(keyIndex==0)
             currentScore = 0;
-        int largerScore = 0;                                                         //Largest number of letters found
-        int keyChar = 0;                                                            //key that found those letters
-        for(int x : possibleKeyChars){                                                  //chars (a->z)&(A->Z)&(" ") in ascii
-            Scanner sc = new Scanner(code);                                     //scan the text
-            for(int j=0; j<keyIndex; j++)                                       //provides offset to start if character isn't first in key
-                sc.next();                                                      // "ditto"
-            int keyCharScore = 0;                                                    //number of times letter was found with current possible key
+        int largerScore = 0;                                                    
+        int keyChar = 0;                                                        
+        //for every character in the ascii list, test against the code
+        for(int x : possibleKeyChars){                                                  
+            Scanner sc = new Scanner(code);                                     
+            //provides offset to start if character isn't first in key
+            for(int j=0; j<keyIndex; j++)                                       
+                sc.next();                                                      
+            int keyCharScore = 0;                                               
             LetterValueGen valGen = new LetterValueGen();
-            while(sc.hasNext()){                                                //while items still in line
-                int xOr = Integer.parseInt(""+sc.next());                       //xOr value 
+            //process every integer in the code
+            while(sc.hasNext()){                                                
+                int xOr = Integer.parseInt(""+sc.next());                       
                 int y = (xOr^x);      
-                int charPoints = valGen.getVal((char)y);                        //xOr value XOR with key
+                int charPoints = valGen.getVal((char)y);                        
                 if(charPoints<0)
                     return -1;
                 keyCharScore += charPoints;                                           //increment keyCharScore
-                for(int j=1; j<keyLen; j++){                                 //depending on keyLen, skips appropriate amount of chars to wrap key
+                //depending on keyLen, skips appropriate amount of chars to wrap key
+                for(int j=1; j<keyLen; j++){                                 
                     try{
                         sc.next();
                     }catch(Exception e){}
                 }
             }
-            if(largerScore<=keyCharScore){                                                //saves key with best results
+            //saves key with best results
+            if(largerScore<=keyCharScore){                                          
                 largerScore = keyCharScore;
                 keyChar = x;
             }
